@@ -59,8 +59,12 @@ if errorlevel 1 (
 echo.
 echo [OK] Build completed.
 
-set "SOURCE_EXE=src-tauri\target\release\auto-scroll.exe"
-set "OUTPUT_DIR=release-portable"
+:: Use the directory where this batch file is located as the project root.
+:: This guarantees the output always lands in d:\Tools\自动滚屏\auto-scroll\release-portable
+:: regardless of where the script is launched from.
+set "PROJECT_ROOT=%~dp0"
+set "SOURCE_EXE=%PROJECT_ROOT%src-tauri\target\release\auto-scroll.exe"
+set "OUTPUT_DIR=%PROJECT_ROOT%release-portable"
 set "OUTPUT_EXE=%OUTPUT_DIR%\auto-scroll.exe"
 
 :: Ensure the portable output directory exists
@@ -68,9 +72,9 @@ if not exist "%OUTPUT_DIR%" (
     mkdir "%OUTPUT_DIR%"
 )
 
-:: Copy the executable to the portable output directory
+:: Copy the executable to the portable output directory, overwriting any existing file
 if exist "%SOURCE_EXE%" (
-    echo [INFO] Copying executable to %OUTPUT_DIR%...
+    echo [INFO] Copying executable to %OUTPUT_DIR% and overwriting existing file...
     copy /Y "%SOURCE_EXE%" "%OUTPUT_EXE%" >nul
     if errorlevel 1 (
         echo [ERROR] Failed to copy executable.

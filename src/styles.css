@@ -36,6 +36,28 @@ body {
   padding: 20px;
 }
 
+/* 语言选择栏：页面最上方 */
+.language-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.language-select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+}
+
+.language-select:focus {
+  border-color: var(--primary);
+}
+
 /* 顶部标题 */
 .header {
   display: flex;

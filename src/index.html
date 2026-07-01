@@ -8,16 +8,18 @@
 </head>
 <body>
   <div class="app">
-    <!-- 顶部标题、语言切换与状态 -->
+    <!-- 语言选择：置于页面最上方 -->
+    <div class="language-bar">
+      <select id="language-select" class="language-select" title="Language">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <!-- 顶部标题与状态 -->
     <header class="header">
       <h1 data-i18n="appName">🖱️ 自动滚屏</h1>
-      <div class="header-actions">
-        <select id="language-select" class="language-select" title="Language">
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-        </select>
-        <div id="status-badge" class="status-badge stopped" data-i18n="statusStopped">已停止</div>
-      </div>
+      <div id="status-badge" class="status-badge stopped" data-i18n="statusStopped">已停止</div>
     </header>
 
     <!-- 目标窗口选择区 -->

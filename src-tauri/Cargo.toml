@@ -1,0 +1,49 @@
+[package]
+name = "auto-scroll"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "auto_scroll_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri 核心框架，启用系统托盘图标特性
+tauri = { version = "2", features = ["tray-icon"] }
+# 序列化/反序列化配置
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 全局系统快捷键
+global-hotkey = "0.6"
+# Windows Win32 API，用于窗口枚举、发送滚动消息、单实例互斥量等
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Media",
+    "Win32_Security",
+    "Win32_System_Performance",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+# 共享状态与并发锁
+parking_lot = "0.12"
+
+# Release 体积优化：极致压缩、链接时优化、移除调试符号、单 codegen unit
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+

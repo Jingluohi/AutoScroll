@@ -74,6 +74,7 @@ pub fn run() {
             hotkey::set_hotkey,
             scroll::toggle_scroll,
             state::get_status,
+            state::set_language,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use parking_lot::Mutex as PLMutex;
 use serde::Serialize;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
-use crate::config::{write_config, AppConfig, ScrollDirection};
+use crate::config::{write_config, AppConfig, Language, ScrollDirection};
 use crate::window::get_window_title;
 use windows::Win32::Foundation::HWND;
 
@@ -53,6 +53,8 @@ pub struct AppStatus {
     pub hotkey: String,
     /// 是否兼容模式。
     pub compatible_mode: bool,
+    /// 当前界面语言。
+    pub language: Language,
 }
 
 /// 滚动工作线程句柄，用于停止当前滚动。
@@ -121,5 +123,21 @@ pub fn get_status(state: State<'_, AppState>) -> AppStatus {
         direction: cfg.direction,
         hotkey: cfg.hotkey.clone(),
         compatible_mode: cfg.compatible_mode,
+        language: cfg.language,
     }
+}
+
+/// 设置界面语言。
+///
+/// 修改后会保存到配置文件，并通知前端刷新 UI。
+#[tauri::command]
+pub fn set_language(
+    language: Language,
+    state: State<'_, AppState>,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    state.config.lock().language = language;
+    state.save_config(&app_handle)?;
+    let _ = app_handle.emit("state-changed", ());
+    Ok(())
 }

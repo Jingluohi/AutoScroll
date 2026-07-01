@@ -7,6 +7,24 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+/// 界面语言。
+///
+/// 支持中文与英文，序列化时保存为小写字符串。
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    /// 简体中文。
+    Zh,
+    /// 英文。
+    En,
+}
+
+impl Default for Language {
+    fn default() -> Self {
+        Self::Zh
+    }
+}
+
 /// 滚动方向。
 ///
 /// 支持四个方向：上下左右。序列化时保存为小写字符串。
@@ -38,8 +56,7 @@ pub struct AppConfig {
     pub target_hwnd: Option<isize>,
 
     /// 滚动速度，范围 1~100。
-    /// 第 1 档为原 100 档系统第 1 档的 120%，第 100 档为原 100 档系统第 60 档，
-    /// 中间严格线性均匀递增。
+    /// 第 1 档为原 1 档的 90%，第 100 档为原 50 档，1~100 档严格线性均匀递增。
     pub speed: i32,
 
     /// 滚动方向。
@@ -50,6 +67,9 @@ pub struct AppConfig {
 
     /// 是否使用兼容模式（SendInput 模拟真实滚轮），默认使用 PostMessage。
     pub compatible_mode: bool,
+
+    /// 界面语言，默认中文。
+    pub language: Language,
 }
 
 impl Default for AppConfig {
@@ -60,6 +80,7 @@ impl Default for AppConfig {
             direction: ScrollDirection::Down,
             hotkey: "Ctrl+Alt+S".to_string(),
             compatible_mode: false,
+            language: Language::Zh,
         }
     }
 }

@@ -1,6 +1,6 @@
 /**
  * 自动滚屏工具 - 前端主逻辑
- * 负责与 Rust 后端通信、更新 UI、录制全局快捷键
+ * 负责与 Rust 后端通信、更新 UI、录制全局快捷键、国际化。
  */
 
 // Tauri 2 在前端暴露的核心 API
@@ -26,6 +26,7 @@ const els = {
   hotkeyPreview: document.getElementById('hotkey-preview'),
   hotkeyCancel: document.getElementById('hotkey-cancel'),
   hotkeySave: document.getElementById('hotkey-save'),
+  languageSelect: document.getElementById('language-select'),
 };
 
 // 当前应用状态缓存
@@ -37,18 +38,141 @@ let currentStatus = {
   direction: 'down',
   hotkey: 'Ctrl+Alt+S',
   compatibleMode: false,
+  language: 'zh',
 };
 
-// 方向显示文本映射
+// 当前语言
+let currentLang = 'zh';
+
+// 方向显示文本映射（按语言）
 const DIRECTION_LABELS = {
-  up: '向上',
-  down: '向下',
-  left: '向左',
-  right: '向右',
+  zh: { up: '向上', down: '向下', left: '向左', right: '向右' },
+  en: { up: 'Up', down: 'Down', left: 'Left', right: 'Right' },
 };
 
 /// 窗口标题最大显示长度，超出时中间用省略号截断。
 const WINDOW_TITLE_MAX_LEN = 40;
+
+/**
+ * 国际化翻译表。
+ */
+const translations = {
+  zh: {
+    appTitle: '自动滚屏',
+    appName: '🖱️ 自动滚屏',
+    statusStopped: '已停止',
+    statusScrolling: '滚屏中',
+    targetWindow: '目标窗口',
+    refresh: '刷新',
+    refreshing: '刷新中…',
+    selectWindow: '-- 选择一个窗口 --',
+    currentTarget: '当前目标：',
+    notSelected: '未选择',
+    selectedWindow: '已选择窗口',
+    clear: '清除',
+    scrollSpeed: '滚动速度',
+    slow: '慢',
+    fast: '快',
+    current: '当前：',
+    scrollDirection: '滚动方向',
+    dirUp: '向上',
+    dirDown: '向下',
+    dirLeft: '向左',
+    dirRight: '向右',
+    currentDirection: '当前方向：',
+    globalHotkey: '全局快捷键',
+    modify: '修改',
+    hotkeyTip: '按下快捷键即可随时 开启 / 关闭 自动滚屏',
+    compatMode: '兼容模式（SendInput 模拟真实滚轮）',
+    compatModeTip:
+      '普通模式不抢夺焦点，适合浏览器、PDF 阅读器等现代程序；若窗口缩放/最小化后无法滚动，或某些旧程序不响应，可开启兼容模式。兼容模式通过 SendInput 模拟真实滚轮，需要把鼠标移到目标窗口上方（或让目标窗口处于激活状态）才生效。',
+    startScroll: '开始滚屏',
+    stopScroll: '停止滚屏',
+    footerTip: '窗口关闭后自动停止 · 配置自动保存 · 支持系统托盘运行',
+    recordHotkey: '录制快捷键',
+    recordHotkeyTip: '请按下你想要的组合键（支持 Ctrl / Alt / Shift + 字母 / 数字 / F1-F24）',
+    waitingKey: '等待按键…',
+    cancel: '取消',
+    save: '保存',
+    mustIncludeModifier: '必须包含 Ctrl / Alt / Shift / Win 之一',
+    error: {
+      selectWindow: '选择窗口失败',
+      clearTarget: '清除目标失败',
+      setSpeed: '设置速度失败',
+      setDirection: '设置方向失败',
+      setCompatMode: '设置兼容模式失败',
+      toggleScroll: '切换滚屏失败',
+      setHotkey: '设置快捷键失败',
+      getStatus: '获取状态失败',
+      listWindows: '刷新窗口列表失败',
+      setLanguage: '设置语言失败',
+    },
+  },
+  en: {
+    appTitle: 'Auto Scroll',
+    appName: '🖱️ Auto Scroll',
+    statusStopped: 'Stopped',
+    statusScrolling: 'Scrolling',
+    targetWindow: 'Target Window',
+    refresh: 'Refresh',
+    refreshing: 'Refreshing…',
+    selectWindow: '-- Select a window --',
+    currentTarget: 'Current target: ',
+    notSelected: 'Not selected',
+    selectedWindow: 'Selected window',
+    clear: 'Clear',
+    scrollSpeed: 'Scroll Speed',
+    slow: 'Slow',
+    fast: 'Fast',
+    current: 'Current: ',
+    scrollDirection: 'Scroll Direction',
+    dirUp: 'Up',
+    dirDown: 'Down',
+    dirLeft: 'Left',
+    dirRight: 'Right',
+    currentDirection: 'Current direction: ',
+    globalHotkey: 'Global Hotkey',
+    modify: 'Modify',
+    hotkeyTip: 'Press the hotkey to toggle auto-scroll anytime',
+    compatMode: 'Compatibility Mode (SendInput simulates real wheel)',
+    compatModeTip:
+      'Normal mode does not steal focus and works well with browsers, PDF readers, etc. If scrolling stops after resizing/minimizing, or some legacy apps do not respond, enable compatibility mode. Compatibility mode uses SendInput to simulate a real wheel; you need to move the mouse over the target window (or make it active) for it to work.',
+    startScroll: 'Start Scrolling',
+    stopScroll: 'Stop Scrolling',
+    footerTip: 'Auto-stop on window close · Auto-save settings · System tray support',
+    recordHotkey: 'Record Hotkey',
+    recordHotkeyTip: 'Press your desired combination (supports Ctrl / Alt / Shift + letter / number / F1-F24)',
+    waitingKey: 'Waiting for key…',
+    cancel: 'Cancel',
+    save: 'Save',
+    mustIncludeModifier: 'Must include Ctrl / Alt / Shift / Win',
+    error: {
+      selectWindow: 'Failed to select window',
+      clearTarget: 'Failed to clear target',
+      setSpeed: 'Failed to set speed',
+      setDirection: 'Failed to set direction',
+      setCompatMode: 'Failed to set compatibility mode',
+      toggleScroll: 'Failed to toggle scrolling',
+      setHotkey: 'Failed to set hotkey',
+      getStatus: 'Failed to get status',
+      listWindows: 'Failed to refresh window list',
+      setLanguage: 'Failed to set language',
+    },
+  },
+};
+
+/**
+ * 获取当前语言的翻译文本。
+ */
+function t(key, fallback = '') {
+  const lang = translations[currentLang] || translations.zh;
+  const keys = key.split('.');
+  let value = lang;
+  for (const k of keys) {
+    value = value?.[k];
+  }
+  return value ?? fallback;
+}
 
 /**
  * 过长字符串中间省略号截断，保留头尾便于识别窗口。
@@ -80,6 +204,19 @@ async function init() {
  * 绑定前端事件
  */
 function bindEvents() {
+  // 语言切换
+  els.languageSelect.addEventListener('change', async (e) => {
+    const lang = e.target.value;
+    try {
+      await invoke('set_language', { language: lang });
+      currentLang = lang;
+      applyLanguage();
+      await refreshStatus();
+    } catch (err) {
+      showError(t('error.setLanguage'), err);
+    }
+  });
+
   // 刷新窗口列表
   els.refreshBtn.addEventListener('click', refreshWindows);
 
@@ -91,7 +228,7 @@ function bindEvents() {
       await invoke('set_target', { hwnd: Number(hwnd) });
       await refreshStatus();
     } catch (err) {
-      showError('选择窗口失败', err);
+      showError(t('error.selectWindow'), err);
     }
   });
 
@@ -101,7 +238,7 @@ function bindEvents() {
       await invoke('clear_target');
       await refreshStatus();
     } catch (err) {
-      showError('清除目标失败', err);
+      showError(t('error.clearTarget'), err);
     }
   });
 
@@ -113,7 +250,7 @@ function bindEvents() {
     try {
       await invoke('set_speed', { speed: Number(e.target.value) });
     } catch (err) {
-      showError('设置速度失败', err);
+      showError(t('error.setSpeed'), err);
     }
   });
 
@@ -125,7 +262,7 @@ function bindEvents() {
         await invoke('set_direction', { direction });
         await refreshStatus();
       } catch (err) {
-        showError('设置方向失败', err);
+        showError(t('error.setDirection'), err);
       }
     });
   });
@@ -135,7 +272,7 @@ function bindEvents() {
     try {
       await invoke('set_compatible_mode', { enabled: e.target.checked });
     } catch (err) {
-      showError('设置兼容模式失败', err);
+      showError(t('error.setCompatMode'), err);
     }
   });
 
@@ -145,7 +282,7 @@ function bindEvents() {
       await invoke('toggle_scroll');
       await refreshStatus();
     } catch (err) {
-      showError('切换滚屏失败', err);
+      showError(t('error.toggleScroll'), err);
     }
   });
 
@@ -159,15 +296,47 @@ function bindEvents() {
 }
 
 /**
+ * 应用当前语言到所有带有 data-i18n 属性的元素。
+ */
+function applyLanguage() {
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('appTitle');
+
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.dataset.i18n;
+    const text = t(key);
+    if (text) {
+      // 如果元素包含子元素（如方向按钮里的箭头），只替换文本节点，保留子元素。
+      if (el.children.length > 0 && el.getAttribute('data-i18n-keep-children') !== 'false') {
+        // 找到第一个文本节点并替换
+        for (const node of el.childNodes) {
+          if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+            node.textContent = text;
+            break;
+          }
+        }
+      } else {
+        el.textContent = text;
+      }
+    }
+  });
+
+  // 动态更新状态相关文本
+  renderStatus();
+}
+
+/**
  * 从后端获取最新状态并刷新 UI
  */
 async function refreshStatus() {
   try {
     const status = await invoke('get_status');
     currentStatus = status;
-    renderStatus();
+    currentLang = status.language || 'zh';
+    els.languageSelect.value = currentLang;
+    applyLanguage();
   } catch (err) {
-    showError('获取状态失败', err);
+    showError(t('error.getStatus'), err);
   }
 }
 
@@ -177,23 +346,23 @@ async function refreshStatus() {
 function renderStatus() {
   // 状态徽章
   if (currentStatus.scrolling) {
-    els.statusBadge.textContent = '滚屏中';
+    els.statusBadge.textContent = t('statusScrolling');
     els.statusBadge.className = 'status-badge scrolling';
-    els.toggleBtn.textContent = '停止滚屏';
+    els.toggleBtn.textContent = t('stopScroll');
     els.toggleBtn.classList.add('danger');
   } else {
-    els.statusBadge.textContent = '已停止';
+    els.statusBadge.textContent = t('statusStopped');
     els.statusBadge.className = 'status-badge stopped';
-    els.toggleBtn.textContent = '开始滚屏';
+    els.toggleBtn.textContent = t('startScroll');
     els.toggleBtn.classList.remove('danger');
   }
 
   // 目标窗口
   if (currentStatus.targetHwnd) {
-    els.targetTitle.textContent = currentStatus.targetTitle || '已选择窗口';
+    els.targetTitle.textContent = currentStatus.targetTitle || t('selectedWindow');
     els.targetTitle.style.color = '#2c3e50';
   } else {
-    els.targetTitle.textContent = '未选择';
+    els.targetTitle.textContent = t('notSelected');
     els.targetTitle.style.color = '#999';
   }
 
@@ -203,7 +372,7 @@ function renderStatus() {
 
   // 方向
   const dir = currentStatus.direction || 'down';
-  els.directionValue.textContent = DIRECTION_LABELS[dir] || '向下';
+  els.directionValue.textContent = (DIRECTION_LABELS[currentLang] || DIRECTION_LABELS.zh)[dir];
   els.directionButtons.forEach((btn) => {
     if (btn.dataset.direction === dir) {
       btn.classList.add('active');
@@ -225,10 +394,11 @@ function renderStatus() {
 async function refreshWindows() {
   try {
     els.windowSelect.disabled = true;
-    els.refreshBtn.textContent = '刷新中…';
+    const originalText = t('refresh');
+    els.refreshBtn.textContent = t('refreshing');
 
     const windows = await invoke('list_windows');
-    els.windowSelect.innerHTML = '<option value="">-- 选择一个窗口 --</option>';
+    els.windowSelect.innerHTML = `<option value="">${t('selectWindow')}</option>`;
 
     windows.forEach((win) => {
       const option = document.createElement('option');
@@ -242,10 +412,10 @@ async function refreshWindows() {
       els.windowSelect.appendChild(option);
     });
   } catch (err) {
-    showError('刷新窗口列表失败', err);
+    showError(t('error.listWindows'), err);
   } finally {
     els.windowSelect.disabled = false;
-    els.refreshBtn.textContent = '刷新';
+    els.refreshBtn.textContent = t('refresh');
   }
 }
 
@@ -254,7 +424,7 @@ async function refreshWindows() {
  */
 function openHotkeyModal() {
   recordingHotkey = { modifiers: new Set(), key: '' };
-  els.hotkeyPreview.textContent = '等待按键…';
+  els.hotkeyPreview.textContent = t('waitingKey');
   els.hotkeySave.disabled = true;
   els.hotkeyModal.classList.remove('hidden');
 }
@@ -288,7 +458,7 @@ function onKeyDown(e) {
 
     // 快捷键必须包含至少一个修饰键，避免与普通输入冲突
     if (modifiers.length === 0) {
-      els.hotkeyPreview.textContent = '必须包含 Ctrl / Alt / Shift / Win 之一';
+      els.hotkeyPreview.textContent = t('mustIncludeModifier');
       els.hotkeySave.disabled = true;
       return;
     }
@@ -318,7 +488,7 @@ function onKeyDown(e) {
       els.speedSlider.value = newSpeed;
       els.speedValue.textContent = newSpeed;
       invoke('set_speed', { speed: newSpeed }).catch((err) =>
-        showError('设置速度失败', err)
+        showError(t('error.setSpeed'), err)
       );
     }
   }
@@ -334,7 +504,7 @@ async function saveHotkey() {
     closeHotkeyModal();
     await refreshStatus();
   } catch (err) {
-    showError('设置快捷键失败', err);
+    showError(t('error.setHotkey'), err);
   }
 }
 

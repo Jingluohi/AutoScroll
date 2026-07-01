@@ -5,7 +5,12 @@ setlocal enabledelayedexpansion
 :: AutoScroll Portable Build Script
 :: Builds the Tauri application as a single portable executable.
 :: No installer or zip archive is produced.
+:: Usage: build.bat [--nopause]
 :: ============================================================
+
+:: Optional flag to skip the final pause (useful for automation).
+set "NOPAUSE=false"
+if /I "%~1"=="--nopause" set "NOPAUSE=true"
 
 echo.
 echo ============================================================
@@ -18,7 +23,7 @@ where npm >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] npm is not installed or not in PATH.
     echo Please install Node.js first: https://nodejs.org/
-    pause
+    if /I "%NOPAUSE%"=="false" pause
     exit /b 1
 )
 
@@ -27,7 +32,7 @@ where cargo >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] Rust / Cargo is not installed or not in PATH.
     echo Please install Rust first: https://rustup.rs/
-    pause
+    if /I "%NOPAUSE%"=="false" pause
     exit /b 1
 )
 
@@ -37,7 +42,7 @@ if not exist "node_modules\" (
     call npm install
     if errorlevel 1 (
         echo [ERROR] Failed to install Node.js dependencies.
-        pause
+        if /I "%NOPAUSE%"=="false" pause
         exit /b 1
     )
     echo [OK] Dependencies installed.
@@ -51,7 +56,7 @@ echo [INFO] Building portable executable. This may take a few minutes...
 call npm run tauri build
 if errorlevel 1 (
     echo [ERROR] Build failed. Check the output above for details.
-    pause
+    if /I "%NOPAUSE%"=="false" pause
     exit /b 1
 )
 
@@ -78,12 +83,12 @@ if exist "%SOURCE_EXE%" (
     copy /Y "%SOURCE_EXE%" "%OUTPUT_EXE%" >nul
     if errorlevel 1 (
         echo [ERROR] Failed to copy executable.
-        pause
+        if /I "%NOPAUSE%"=="false" pause
         exit /b 1
     )
 ) else (
     echo [ERROR] Built executable not found at: %SOURCE_EXE%
-    pause
+    if /I "%NOPAUSE%"=="false" pause
     exit /b 1
 )
 
@@ -92,4 +97,4 @@ echo ============================================================
 echo [SUCCESS] Portable executable: %OUTPUT_EXE%
 echo ============================================================
 echo.
-pause
+if /I "%NOPAUSE%"=="false" pause

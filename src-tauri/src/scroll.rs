@@ -90,6 +90,27 @@ pub fn set_speed(
     Ok(())
 }
 
+/// 内部调节滚动速度，供全局热键调用。
+///
+/// `delta` 为正表示加速，为负表示减速，结果会被限制在 1~100 档范围内。
+pub fn adjust_speed_internal(
+    delta: i32,
+    state: &AppState,
+    app_handle: &AppHandle,
+) -> Result<(), String> {
+    let new_speed = {
+        let mut cfg = state.config.lock();
+        let current = cfg.speed;
+        let new = (current + delta).clamp(1, 100);
+        cfg.speed = new;
+        new
+    };
+    state.worker.speed.store(new_speed, Ordering::Relaxed);
+    state.save_config(app_handle)?;
+    let _ = app_handle.emit("state-changed", ());
+    Ok(())
+}
+
 /// 设置滚动方向。
 ///
 /// 如果当前正在滚屏，会同步更新工作线程中的方向原子，实现热切换。

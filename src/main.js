@@ -20,6 +20,11 @@ const els = {
   directionButtons: document.querySelectorAll('.btn-direction'),
   hotkeyInput: document.getElementById('hotkey-input'),
   setHotkeyBtn: document.getElementById('set-hotkey-btn'),
+  hotkeySpeedDownInput: document.getElementById('hotkey-speed-down-input'),
+  setHotkeySpeedDownBtn: document.getElementById('set-hotkey-speed-down-btn'),
+  hotkeySpeedUpInput: document.getElementById('hotkey-speed-up-input'),
+  setHotkeySpeedUpBtn: document.getElementById('set-hotkey-speed-up-btn'),
+  hotkeyModalTitle: document.getElementById('hotkey-modal-title'),
   compatCheckbox: document.getElementById('compat-checkbox'),
   toggleBtn: document.getElementById('toggle-btn'),
   hotkeyModal: document.getElementById('hotkey-modal'),
@@ -37,6 +42,8 @@ let currentStatus = {
   speed: 50,
   direction: 'down',
   hotkey: 'Ctrl+Alt+S',
+  speedDownHotkey: 'Ctrl+Alt+Left',
+  speedUpHotkey: 'Ctrl+Alt+Right',
   compatibleMode: false,
   language: 'zh',
 };
@@ -81,8 +88,12 @@ const translations = {
     dirRight: '向右',
     currentDirection: '当前方向：',
     globalHotkey: '全局快捷键',
+    hotkeyToggle: '开启 / 关闭滚屏',
+    hotkeySpeedDown: '速度减小一档',
+    hotkeySpeedUp: '速度增大一档',
     modify: '修改',
-    hotkeyTip: '按下快捷键即可随时 开启 / 关闭 自动滚屏',
+    hotkeyTip: '按下快捷键即可随时调节滚屏',
+    recordHotkeyFor: '录制快捷键：{{name}}',
     compatMode: '兼容模式（SendInput 模拟真实滚轮）',
     compatModeTip:
       '普通模式不抢夺焦点，适合浏览器、PDF 阅读器等现代程序；若窗口缩放/最小化后无法滚动，或某些旧程序不响应，可开启兼容模式。兼容模式通过 SendInput 模拟真实滚轮，需要把鼠标移到目标窗口上方（或让目标窗口处于激活状态）才生效。',
@@ -131,9 +142,13 @@ const translations = {
     dirLeft: 'Left',
     dirRight: 'Right',
     currentDirection: 'Current direction: ',
-    globalHotkey: 'Global Hotkey',
+    globalHotkey: 'Global Hotkeys',
+    hotkeyToggle: 'Start / Stop Scrolling',
+    hotkeySpeedDown: 'Decrease Speed',
+    hotkeySpeedUp: 'Increase Speed',
     modify: 'Modify',
-    hotkeyTip: 'Press the hotkey to toggle auto-scroll anytime',
+    hotkeyTip: 'Press the hotkeys to control auto-scroll anytime',
+    recordHotkeyFor: 'Record Hotkey: {{name}}',
     compatMode: 'Compatibility Mode (SendInput simulates real wheel)',
     compatModeTip:
       'Normal mode does not steal focus and works well with browsers, PDF readers, etc. If scrolling stops after resizing/minimizing, or some legacy apps do not respond, enable compatibility mode. Compatibility mode uses SendInput to simulate a real wheel; you need to move the mouse over the target window (or make it active) for it to work.',
@@ -164,14 +179,17 @@ const translations = {
 /**
  * 获取当前语言的翻译文本。
  */
-function t(key, fallback = '') {
+function t(key, fallback = '', replacements = {}) {
   const lang = translations[currentLang] || translations.zh;
   const keys = key.split('.');
   let value = lang;
   for (const k of keys) {
     value = value?.[k];
   }
-  return value ?? fallback;
+  if (typeof value !== 'string') return fallback;
+  return value.replace(/\{\{(\w+)\}\}/g, (_, name) =>
+    replacements[name] !== undefined ? replacements[name] : ''
+  );
 }
 
 /**
@@ -185,6 +203,9 @@ function truncateMiddle(text, maxLen) {
 
 // 快捷键录制状态
 let recordingHotkey = null;
+
+/// 当前正在录制的快捷键目标：toggle / speedDown / speedUp。
+let currentHotkeyTarget = 'toggle';
 
 /**
  * 初始化：绑定事件、加载状态、监听后端状态变化
@@ -287,7 +308,9 @@ function bindEvents() {
   });
 
   // 修改快捷键
-  els.setHotkeyBtn.addEventListener('click', openHotkeyModal);
+  els.setHotkeyBtn.addEventListener('click', () => openHotkeyModal('toggle'));
+  els.setHotkeySpeedDownBtn.addEventListener('click', () => openHotkeyModal('speedDown'));
+  els.setHotkeySpeedUpBtn.addEventListener('click', () => openHotkeyModal('speedUp'));
   els.hotkeyCancel.addEventListener('click', closeHotkeyModal);
   els.hotkeySave.addEventListener('click', saveHotkey);
 
@@ -331,7 +354,19 @@ function applyLanguage() {
 async function refreshStatus() {
   try {
     const status = await invoke('get_status');
-    currentStatus = status;
+    // 将后端的 snake_case 字段映射到前端的 camelCase 状态。
+    currentStatus = {
+      scrolling: status.scrolling,
+      targetHwnd: status.target_hwnd,
+      targetTitle: status.target_title,
+      speed: status.speed,
+      direction: status.direction,
+      hotkey: status.hotkey,
+      speedDownHotkey: status.speed_down_hotkey,
+      speedUpHotkey: status.speed_up_hotkey,
+      compatibleMode: status.compatible_mode,
+      language: status.language,
+    };
     currentLang = status.language || 'zh';
     els.languageSelect.value = currentLang;
     applyLanguage();
@@ -382,7 +417,9 @@ function renderStatus() {
   });
 
   // 快捷键
-  els.hotkeyInput.value = currentStatus.hotkey;
+  els.hotkeyInput.value = currentStatus.hotkey || 'Ctrl+Alt+S';
+  els.hotkeySpeedDownInput.value = currentStatus.speedDownHotkey || 'Ctrl+Alt+Left';
+  els.hotkeySpeedUpInput.value = currentStatus.speedUpHotkey || 'Ctrl+Alt+Right';
 
   // 兼容模式
   els.compatCheckbox.checked = currentStatus.compatibleMode;
@@ -419,11 +456,27 @@ async function refreshWindows() {
   }
 }
 
-/**
- * 打开快捷键录制弹窗
+/**>
+ * 打开快捷键录制弹窗。
+ *
+ * @param {'toggle' | 'speedDown' | 'speedUp'} target 正在录制哪一项快捷键。
  */
-function openHotkeyModal() {
+function openHotkeyModal(target) {
+  currentHotkeyTarget = target;
   recordingHotkey = { modifiers: new Set(), key: '' };
+
+  // 根据目标更新弹窗标题。
+  const nameKey =
+    target === 'toggle'
+      ? 'hotkeyToggle'
+      : target === 'speedDown'
+      ? 'hotkeySpeedDown'
+      : 'hotkeySpeedUp';
+  const title = t('recordHotkeyFor', '', { name: t(nameKey) });
+  if (els.hotkeyModalTitle) {
+    els.hotkeyModalTitle.textContent = title;
+  }
+
   els.hotkeyPreview.textContent = t('waitingKey');
   els.hotkeySave.disabled = true;
   els.hotkeyModal.classList.remove('hidden');
@@ -500,7 +553,22 @@ function onKeyDown(e) {
 async function saveHotkey() {
   if (!recordingHotkey || !recordingHotkey.combo) return;
   try {
-    await invoke('set_hotkey', { hotkeyStr: recordingHotkey.combo });
+    if (currentHotkeyTarget === 'toggle') {
+      await invoke('set_hotkey', { hotkeyStr: recordingHotkey.combo });
+    } else {
+      const down =
+        currentHotkeyTarget === 'speedDown'
+          ? recordingHotkey.combo
+          : currentStatus.speedDownHotkey;
+      const up =
+        currentHotkeyTarget === 'speedUp'
+          ? recordingHotkey.combo
+          : currentStatus.speedUpHotkey;
+      await invoke('set_speed_hotkeys', {
+        speedDownHotkey: down,
+        speedUpHotkey: up,
+      });
+    }
     closeHotkeyModal();
     await refreshStatus();
   } catch (err) {

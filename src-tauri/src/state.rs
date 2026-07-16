@@ -51,6 +51,10 @@ pub struct AppStatus {
     pub direction: ScrollDirection,
     /// 当前热键。
     pub hotkey: String,
+    /// 减小速度的热键。
+    pub speed_down_hotkey: String,
+    /// 增大速度的热键。
+    pub speed_up_hotkey: String,
     /// 是否兼容模式。
     pub compatible_mode: bool,
     /// 当前界面语言。
@@ -122,6 +126,8 @@ pub fn get_status(state: State<'_, AppState>) -> AppStatus {
         speed: cfg.speed,
         direction: cfg.direction,
         hotkey: cfg.hotkey.clone(),
+        speed_down_hotkey: cfg.speed_down_hotkey.clone(),
+        speed_up_hotkey: cfg.speed_up_hotkey.clone(),
         compatible_mode: cfg.compatible_mode,
         language: cfg.language,
     }

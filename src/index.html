@@ -68,9 +68,28 @@
     <!-- 快捷键设置区 -->
     <section class="card">
       <h2 data-i18n="globalHotkey">全局快捷键</h2>
-      <div class="hotkey-row">
-        <input id="hotkey-input" type="text" value="Ctrl+Alt+S" readonly />
-        <button id="set-hotkey-btn" class="btn btn-secondary" type="button" data-i18n="modify">修改</button>
+      <div class="hotkey-list">
+        <div class="hotkey-item">
+          <label data-i18n="hotkeyToggle">开启 / 关闭滚屏</label>
+          <div class="hotkey-input-row">
+            <input id="hotkey-input" type="text" value="Ctrl+Alt+S" readonly />
+            <button id="set-hotkey-btn" class="btn btn-secondary" type="button" data-i18n="modify" data-hotkey-target="toggle">修改</button>
+          </div>
+        </div>
+        <div class="hotkey-item">
+          <label data-i18n="hotkeySpeedDown">速度减小一档</label>
+          <div class="hotkey-input-row">
+            <input id="hotkey-speed-down-input" type="text" value="Ctrl+Alt+Left" readonly />
+            <button id="set-hotkey-speed-down-btn" class="btn btn-secondary" type="button" data-i18n="modify" data-hotkey-target="speedDown">修改</button>
+          </div>
+        </div>
+        <div class="hotkey-item">
+          <label data-i18n="hotkeySpeedUp">速度增大一档</label>
+          <div class="hotkey-input-row">
+            <input id="hotkey-speed-up-input" type="text" value="Ctrl+Alt+Right" readonly />
+            <button id="set-hotkey-speed-up-btn" class="btn btn-secondary" type="button" data-i18n="modify" data-hotkey-target="speedUp">修改</button>
+          </div>
+        </div>
       </div>
       <p class="tip" data-i18n="hotkeyTip">按下快捷键即可随时 开启 / 关闭 自动滚屏</p>
     </section>
@@ -102,7 +121,7 @@
   <!-- 快捷键录制弹窗 -->
   <div id="hotkey-modal" class="modal hidden">
     <div class="modal-content">
-      <h3 data-i18n="recordHotkey">录制快捷键</h3>
+      <h3 id="hotkey-modal-title">录制快捷键</h3>
       <p data-i18n="recordHotkeyTip">请按下你想要的组合键（支持 Ctrl / Alt / Shift + 字母 / 数字 / F1-F24）</p>
       <div id="hotkey-preview" class="hotkey-preview" data-i18n="waitingKey">等待按键…</div>
       <div class="modal-actions">

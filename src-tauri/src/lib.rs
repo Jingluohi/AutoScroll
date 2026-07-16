@@ -21,7 +21,7 @@ pub mod window;
 use tauri::{AppHandle, Manager};
 
 use crate::config::load_config;
-use crate::hotkey::{init_hotkey_manager, start_hotkey_listener};
+use crate::hotkey::{register_hotkeys_from_config, start_hotkey_listener};
 use crate::state::AppState;
 use crate::tray::setup_tray;
 
@@ -32,7 +32,11 @@ pub fn run() {
         .setup(|app| {
             // 加载配置并初始化状态。
             let config = load_config(&app.handle());
-            let hotkey_str = config.hotkey.clone();
+
+            // 先根据配置注册全局热键，再把配置 move 进 AppState。
+            if let Err(e) = register_hotkeys_from_config(&config) {
+                eprintln!("全局热键初始化失败: {}", e);
+            }
             app.manage(AppState::new(config));
 
             // 确保主窗口显示并聚焦。
@@ -49,12 +53,7 @@ pub fn run() {
                 });
             }
 
-            // 设置全局热键并启动监听线程。
-            // 热键注册失败（例如被其他程序占用）不应导致整个应用退出，
-            // 因此只记录错误，用户仍可在界面上看到并修改热键。
-            if let Err(e) = init_hotkey_manager(&hotkey_str) {
-                eprintln!("全局热键初始化失败: {}", e);
-            }
+            // 启动全局热键监听线程。
             start_hotkey_listener(&app.handle());
 
             // 设置系统托盘。
@@ -72,6 +71,7 @@ pub fn run() {
             scroll::set_direction,
             scroll::set_compatible_mode,
             hotkey::set_hotkey,
+            hotkey::set_speed_hotkeys,
             scroll::toggle_scroll,
             state::get_status,
             state::set_language,

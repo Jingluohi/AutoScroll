@@ -175,13 +175,26 @@ body {
   color: var(--text-secondary);
 }
 
-/* 快捷键 */
-.hotkey-row {
+/* 快捷键列表 */
+.hotkey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hotkey-item label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.hotkey-input-row {
   display: flex;
   gap: 8px;
 }
 
-#hotkey-input {
+.hotkey-input-row input {
   flex: 1;
   padding: 8px 10px;
   border: 1px solid var(--border);

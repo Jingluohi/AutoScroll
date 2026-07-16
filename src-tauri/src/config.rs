@@ -62,8 +62,14 @@ pub struct AppConfig {
     /// 滚动方向。
     pub direction: ScrollDirection,
 
-    /// 全局快捷键字符串，例如 "Ctrl+Alt+S"。
+    /// 开启 / 关闭滚屏的全局快捷键字符串，例如 "Ctrl+Alt+S"。
     pub hotkey: String,
+
+    /// 减小一档速度的全局快捷键字符串，例如 "Ctrl+Alt+Left"。
+    pub speed_down_hotkey: String,
+
+    /// 增大一档速度的全局快捷键字符串，例如 "Ctrl+Alt+Right"。
+    pub speed_up_hotkey: String,
 
     /// 是否使用兼容模式（SendInput 模拟真实滚轮），默认使用 PostMessage。
     pub compatible_mode: bool,
@@ -79,6 +85,8 @@ impl Default for AppConfig {
             speed: 50,
             direction: ScrollDirection::Down,
             hotkey: "Ctrl+Alt+S".to_string(),
+            speed_down_hotkey: "Ctrl+Alt+Left".to_string(),
+            speed_up_hotkey: "Ctrl+Alt+Right".to_string(),
             compatible_mode: false,
             language: Language::Zh,
         }
